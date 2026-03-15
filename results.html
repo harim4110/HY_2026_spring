@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Behavior Results Dashboard</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="panel">
+        <p class="eyebrow">Results</p>
+        <h1>Class Results Dashboard</h1>
+        <p class="intro">
+          수업이 끝난 뒤 각 과제의 1등, 상위 기록, 조건별 평균 반응시간과 정확도를 간단히 확인하는 화면입니다.
+        </p>
+        <div class="submission-actions">
+          <a class="ghost-button link-button" href="./index.html">실험 화면으로</a>
+          <button id="refresh-button" class="primary-button">새로 불러오기</button>
+        </div>
+        <p id="dashboard-status" class="submission-status"></p>
+      </section>
+
+      <section class="panel">
+        <h2>Winners</h2>
+        <div id="winner-cards" class="summary-cards"></div>
+      </section>
+
+      <section class="panel">
+        <h2>Leaderboards</h2>
+        <div id="leaderboards" class="task-menu"></div>
+      </section>
+
+      <section class="panel">
+        <h2>Condition Means</h2>
+        <div id="condition-charts" class="task-menu"></div>
+      </section>
+    </main>
+
+    <script type="module" src="./results.js"></script>
+  </body>
+</html>

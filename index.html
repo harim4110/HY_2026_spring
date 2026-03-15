@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Cognitive Tasks Demo</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="panel hero" id="setup-panel">
+        <p class="eyebrow">Cognitive Science Class</p>
+        <h1>Stroop + Visual Search</h1>
+        <p class="intro">
+          학생이 모바일 또는 노트북으로 접속해 두 과제를 수행하고, 결과를 Google Sheets로 제출하거나
+          CSV로 내려받을 수 있는 수업용 웹앱입니다.
+        </p>
+
+        <form id="setup-form" class="setup-form">
+          <label>
+            학번
+            <input id="participant-id" name="participantId" type="text" maxlength="24" placeholder="예: 20260001" required />
+          </label>
+          <p id="participant-hint" class="field-hint">같은 학번으로 여러 번 제출하면 Google Sheets에서 자동으로 `_1`, `_2`, `_3`가 붙습니다.</p>
+
+          <label>
+            기기 유형
+            <select id="device-type" name="deviceType">
+              <option value="mobile">모바일</option>
+              <option value="tablet">태블릿</option>
+              <option value="laptop">노트북/데스크톱</option>
+            </select>
+          </label>
+
+          <button type="submit" class="primary-button">실험 시작</button>
+        </form>
+
+        <div class="task-summary">
+          <article>
+            <h2>Stroop</h2>
+            <p>영어 색단어를 보고 단어 뜻이 아니라 글자 색을 판단합니다.</p>
+          </article>
+          <article>
+            <h2>Visual Search</h2>
+            <p>feature search와 conjunction search를 섞어서 목표 자극 존재 여부를 판단합니다.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel hidden" id="menu-panel">
+        <p class="eyebrow">Task Menu</p>
+        <h2 id="welcome-title"></h2>
+        <p class="intro">
+          원하는 과제를 아무 순서로 시작할 수 있고, 끝난 뒤 다시 메뉴로 돌아와 다른 과제나 같은 과제를 다시
+          실행할 수 있습니다.
+        </p>
+        <div id="task-menu" class="task-menu"></div>
+        <div id="overall-stats" class="summary-cards"></div>
+        <div class="submission-actions">
+          <button id="menu-submit-button" class="primary-button" disabled>Google Sheets로 제출</button>
+          <button id="menu-download-button" class="secondary-button" disabled>CSV 다운로드</button>
+          <a class="ghost-button link-button" href="./results.html">결과 대시보드</a>
+          <button id="menu-reset-button" class="ghost-button">참여자 다시 설정</button>
+        </div>
+        <p id="menu-status" class="submission-status"></p>
+      </section>
+
+      <section class="panel hidden" id="instruction-panel">
+        <p class="eyebrow" id="task-tag">Practice</p>
+        <h2 id="task-title"></h2>
+        <p id="task-description"></p>
+        <ul id="task-rules" class="rules"></ul>
+        <button id="start-task-button" class="primary-button">Start practice</button>
+      </section>
+
+      <section class="panel hidden task-panel" id="task-panel">
+        <div class="task-header">
+          <div>
+            <p class="eyebrow" id="task-name-label"></p>
+            <h2 id="task-progress-title"></h2>
+          </div>
+          <div class="status-badges">
+            <span id="phase-badge" class="badge"></span>
+            <span id="trial-badge" class="badge"></span>
+          </div>
+        </div>
+
+        <div id="fixation" class="fixation hidden">+</div>
+
+        <div id="stroop-stimulus" class="stroop-stimulus hidden">
+          <span id="stroop-word"></span>
+        </div>
+
+        <div id="visual-search-stimulus" class="search-grid hidden"></div>
+
+        <div id="response-buttons" class="response-buttons hidden"></div>
+
+        <p id="feedback" class="feedback" aria-live="polite"></p>
+      </section>
+
+      <section class="panel hidden" id="summary-panel">
+        <p class="eyebrow">Complete</p>
+        <h2 id="summary-title">실험이 끝났습니다</h2>
+        <div id="summary-cards" class="summary-cards"></div>
+        <div class="submission-actions">
+          <button id="submit-button" class="primary-button">Google Sheets로 제출</button>
+          <button id="download-button" class="secondary-button">CSV 다운로드</button>
+          <a class="ghost-button link-button" href="./results.html">결과 대시보드</a>
+          <button id="back-to-menu-button" class="ghost-button">메뉴로 돌아가기</button>
+          <button id="restart-button" class="ghost-button">처음으로</button>
+        </div>
+        <p id="submission-status" class="submission-status"></p>
+      </section>
+    </main>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
