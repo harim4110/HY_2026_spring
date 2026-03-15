@@ -1,10 +1,9 @@
-import { APPS_SCRIPT_URL } from "./config.js";
+import { APPS_SCRIPT_URL } from "./config.js?v=20260316-debug1";
 
 const els = {
   refreshButton: document.querySelector("#refresh-button"),
   status: document.querySelector("#dashboard-status"),
   winnerCards: document.querySelector("#winner-cards"),
-  leaderboards: document.querySelector("#leaderboards"),
   conditionCharts: document.querySelector("#condition-charts"),
 };
 
@@ -29,7 +28,6 @@ async function loadSummary() {
 
     const data = await response.json();
     renderWinners(data.winners || {});
-    renderLeaderboards(data.leaderboards || {});
     renderConditionCharts(data.conditionMeans || {});
     els.status.textContent = `마지막 갱신: ${new Date(data.generatedAt).toLocaleString()}`;
   } catch (error) {
@@ -60,22 +58,6 @@ function renderWinners(winners) {
   });
 }
 
-function renderLeaderboards(leaderboards) {
-  els.leaderboards.innerHTML = "";
-  ["stroop", "visual-search"].forEach((taskId) => {
-    const rows = leaderboards[taskId] || [];
-    const card = document.createElement("article");
-    card.className = "task-card";
-    card.innerHTML = `
-      <h3>${labelTask(taskId)}</h3>
-      <div class="leaderboard-table">
-        ${rows.length ? buildLeaderboardTable(rows) : "<p>데이터가 아직 없습니다.</p>"}
-      </div>
-    `;
-    els.leaderboards.appendChild(card);
-  });
-}
-
 function renderConditionCharts(conditionMeans) {
   els.conditionCharts.innerHTML = "";
   ["stroop", "visual-search"].forEach((taskId) => {
@@ -91,31 +73,6 @@ function renderConditionCharts(conditionMeans) {
     `;
     els.conditionCharts.appendChild(card);
   });
-}
-
-function buildLeaderboardTable(rows) {
-  return `
-    <table class="simple-table">
-      <thead>
-        <tr>
-          <th>Rank</th>
-          <th>ID</th>
-          <th>Accuracy</th>
-          <th>Mean RT</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${rows.map((row, index) => `
-          <tr>
-            <td>${index + 1}</td>
-            <td>${row.participantAttemptId}</td>
-            <td>${row.accuracy}%</td>
-            <td>${row.meanRt} ms</td>
-          </tr>
-        `).join("")}
-      </tbody>
-    </table>
-  `;
 }
 
 function buildConditionRow(row, allRows) {

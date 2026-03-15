@@ -1,9 +1,18 @@
-import { APPS_SCRIPT_URL } from "./config.js";
+import { APPS_SCRIPT_URL } from "./config.js?v=20260316-debug1";
 
-const TRIAL_CONFIG = {
+const DEBUG_MODE = new URLSearchParams(window.location.search).get("debug") === "1";
+
+const BASE_TRIAL_CONFIG = {
   stroop: { practice: 4, main: 20 },
   visualSearch: { practice: 6, main: 24 },
 };
+
+const TRIAL_CONFIG = DEBUG_MODE
+  ? {
+      stroop: { practice: 1, main: 4 },
+      visualSearch: { practice: 1, main: 4 },
+    }
+  : BASE_TRIAL_CONFIG;
 
 const STROOP_COLORS = [
   { key: "red", label: "RED", css: "#dc2626" },
@@ -64,6 +73,7 @@ const appState = {
   taskRuns: [],
   activeRun: null,
   lastSubmission: null,
+  lastSyncError: null,
 };
 
 const els = {
@@ -124,6 +134,7 @@ function handleSetupSubmit(event) {
   appState.taskRuns = [];
   appState.activeRun = null;
   appState.lastSubmission = null;
+  appState.lastSyncError = null;
   renderMenu();
   showMenu();
 }
@@ -178,10 +189,15 @@ function updateOverallStats() {
     els.menuStatus.textContent = "No data collected yet.";
   } else if (!APPS_SCRIPT_URL) {
     els.menuStatus.textContent = "Apps Script URL is empty.";
+  } else if (appState.lastSyncError) {
+    els.menuStatus.textContent = `Last sync failed: ${appState.lastSyncError}`;
   } else if (appState.lastSubmission?.participantAttemptId) {
     els.menuStatus.textContent = `Latest official save: ${appState.lastSubmission.participantAttemptId}`;
   } else {
     els.menuStatus.textContent = "Each finished task is automatically sent to Google Sheets.";
+  }
+  if (DEBUG_MODE) {
+    els.menuStatus.textContent += ` [debug on: stroop ${TRIAL_CONFIG.stroop.main}, visual ${TRIAL_CONFIG.visualSearch.main}]`;
   }
 }
 
@@ -392,6 +408,9 @@ function showTaskSummary(task, metrics) {
   els.submissionStatus.textContent = APPS_SCRIPT_URL
     ? "자동 제출 중입니다..."
     : "Apps Script URL is empty.";
+  if (DEBUG_MODE) {
+    els.submissionStatus.textContent += " Debug mode is on.";
+  }
 }
 
 async function syncResults() {
@@ -404,6 +423,7 @@ async function syncResults() {
     return;
   }
 
+  appState.lastSyncError = null;
   setStatusText("Submitting to Google Sheets...");
 
   try {
@@ -424,12 +444,14 @@ async function syncResults() {
 
     const data = await response.json();
     appState.lastSubmission = data;
+    appState.lastSyncError = null;
     setStatusText(
       data.participantAttemptId
         ? `Submission complete. Official ID: ${data.participantAttemptId}`
         : `Submission complete. Inserted ${data.insertedRows ?? 0} new rows.`
     );
   } catch (error) {
+    appState.lastSyncError = error.message;
     setStatusText(`Submission failed: ${error.message}.`);
   }
 }
@@ -467,17 +489,35 @@ function goToOtherTask() {
 }
 
 function buildStroopTrials(count) {
+  const congruentCount = Math.floor(count / 2);
+  const incongruentCount = count - congruentCount;
   const trials = [];
-  for (let index = 0; index < count; index += 1) {
+
+  for (let index = 0; index < congruentCount; index += 1) {
     const word = pickRandom(STROOP_COLORS);
-    const congruent = Math.random() < 0.5;
-    const ink = congruent ? word : pickRandom(STROOP_COLORS.filter((item) => item.key !== word.key));
+    trials.push({
+      wordLabel: word.label,
+      inkCss: word.css,
+      correctKey: word.key,
+      data: {
+        condition: "congruent",
+        wordMeaning: word.key,
+        inkColor: word.key,
+        setSize: "",
+        targetPresent: "",
+      },
+    });
+  }
+
+  for (let index = 0; index < incongruentCount; index += 1) {
+    const word = pickRandom(STROOP_COLORS);
+    const ink = pickRandom(STROOP_COLORS.filter((item) => item.key !== word.key));
     trials.push({
       wordLabel: word.label,
       inkCss: ink.css,
       correctKey: ink.key,
       data: {
-        condition: congruent ? "congruent" : "incongruent",
+        condition: "incongruent",
         wordMeaning: word.key,
         inkColor: ink.key,
         setSize: "",
@@ -490,43 +530,54 @@ function buildStroopTrials(count) {
 
 function buildVisualSearchTrials(count) {
   const setSizes = [8, 16, 24];
-  const conditions = ["feature-search", "conjunction-search"];
   const trials = [];
+  const featureCount = Math.floor(count / 2);
+  const conjunctionCount = count - featureCount;
 
-  for (let index = 0; index < count; index += 1) {
-    const condition = conditions[index % conditions.length];
-    const targetPresent = Math.random() < 0.5;
-    const setSize = pickRandom(setSizes);
-    const columns = setSize <= 8 ? 4 : 6;
-    const items = [];
-
-    if (targetPresent) {
-      items.push(condition === "feature-search" ? VISUAL_STIMULI.featureTarget : VISUAL_STIMULI.conjunctionTarget);
-    }
-
-    while (items.length < setSize) {
-      if (condition === "feature-search") {
-        items.push(VISUAL_STIMULI.featureDistractor);
-      } else {
-        items.push(Math.random() < 0.5 ? VISUAL_STIMULI.conjunctionA : VISUAL_STIMULI.conjunctionB);
-      }
-    }
-
-    trials.push({
-      columns,
-      items: shuffle(items),
-      correctResponse: targetPresent ? "present" : "absent",
-      data: {
-        condition,
-        wordMeaning: "",
-        inkColor: "",
-        setSize,
-        targetPresent,
-      },
-    });
-  }
+  addVisualConditionTrials("feature-search", featureCount);
+  addVisualConditionTrials("conjunction-search", conjunctionCount);
 
   return shuffle(trials);
+
+  function addVisualConditionTrials(condition, conditionCount) {
+    const presentCount = Math.floor(conditionCount / 2);
+    const absentCount = conditionCount - presentCount;
+    const targetPresenceList = [
+      ...Array.from({ length: presentCount }, () => true),
+      ...Array.from({ length: absentCount }, () => false),
+    ];
+
+    targetPresenceList.forEach((targetPresent) => {
+      const setSize = pickRandom(setSizes);
+      const columns = setSize <= 8 ? 4 : 6;
+      const items = [];
+
+      if (targetPresent) {
+        items.push(condition === "feature-search" ? VISUAL_STIMULI.featureTarget : VISUAL_STIMULI.conjunctionTarget);
+      }
+
+      while (items.length < setSize) {
+        if (condition === "feature-search") {
+          items.push(VISUAL_STIMULI.featureDistractor);
+        } else {
+          items.push(Math.random() < 0.5 ? VISUAL_STIMULI.conjunctionA : VISUAL_STIMULI.conjunctionB);
+        }
+      }
+
+      trials.push({
+        columns,
+        items: shuffle(items),
+        correctResponse: targetPresent ? "present" : "absent",
+        data: {
+          condition,
+          wordMeaning: "",
+          inkColor: "",
+          setSize,
+          targetPresent,
+        },
+      });
+    });
+  }
 }
 
 function sanitizeParticipantId(value) {

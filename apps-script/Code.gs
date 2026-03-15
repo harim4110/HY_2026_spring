@@ -100,7 +100,6 @@ function doGet(e) {
       ok: true,
       generatedAt: new Date().toISOString(),
       winners: {},
-      leaderboards: {},
       conditionMeans: {},
     });
   }
@@ -114,7 +113,6 @@ function doGet(e) {
     ok: true,
     generatedAt: new Date().toISOString(),
     winners: buildWinners(summaries),
-    leaderboards: buildLeaderboards(summaries),
     conditionMeans: buildConditionMeans(rows),
   });
 }
@@ -213,17 +211,6 @@ function buildWinners(summaries) {
     }
   });
   return winners;
-}
-
-function buildLeaderboards(summaries) {
-  var leaderboards = {};
-  ["stroop", "visual-search"].forEach(function(taskId) {
-    leaderboards[taskId] = summaries
-      .filter(function(item) { return item.taskId === taskId; })
-      .sort(compareRuns)
-      .slice(0, 5);
-  });
-  return leaderboards;
 }
 
 function buildConditionMeans(rows) {
