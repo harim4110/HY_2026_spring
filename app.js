@@ -44,6 +44,7 @@ const TASKS = {
     rules: [
       "Target: green square.",
       "Tap PRESENT if the target is on the screen, ABSENT if not.",
+      "Feature search uses dark circles with one green square target.",
       "Main block mixes feature search and conjunction search for a simple class comparison.",
     ],
     buttonLabels: ["PRESENT", "ABSENT"],
@@ -76,7 +77,6 @@ const els = {
   taskMenu: document.querySelector("#task-menu"),
   overallStats: document.querySelector("#overall-stats"),
   menuStatus: document.querySelector("#menu-status"),
-  menuSubmitButton: document.querySelector("#menu-submit-button"),
   menuDownloadButton: document.querySelector("#menu-download-button"),
   menuResetButton: document.querySelector("#menu-reset-button"),
   instructionPanel: document.querySelector("#instruction-panel"),
@@ -99,20 +99,19 @@ const els = {
   summaryPanel: document.querySelector("#summary-panel"),
   summaryTitle: document.querySelector("#summary-title"),
   summaryCards: document.querySelector("#summary-cards"),
-  submitButton: document.querySelector("#submit-button"),
+  nextTaskButton: document.querySelector("#next-task-button"),
+  retryTaskButton: document.querySelector("#retry-task-button"),
   downloadButton: document.querySelector("#download-button"),
   backToMenuButton: document.querySelector("#back-to-menu-button"),
-  restartButton: document.querySelector("#restart-button"),
   submissionStatus: document.querySelector("#submission-status"),
 };
 
 els.setupForm.addEventListener("submit", handleSetupSubmit);
 els.startTaskButton.addEventListener("click", startCurrentTask);
-els.submitButton.addEventListener("click", submitResults);
+els.nextTaskButton.addEventListener("click", goToOtherTask);
+els.retryTaskButton.addEventListener("click", retryCurrentTask);
 els.downloadButton.addEventListener("click", downloadCsv);
 els.backToMenuButton.addEventListener("click", showMenu);
-els.restartButton.addEventListener("click", resetApp);
-els.menuSubmitButton.addEventListener("click", submitResults);
 els.menuDownloadButton.addEventListener("click", downloadCsv);
 els.menuResetButton.addEventListener("click", resetApp);
 
@@ -178,17 +177,16 @@ function updateOverallStats() {
     </article>
   `;
 
-  const canSubmit = appState.results.length > 0;
-  els.menuSubmitButton.disabled = !canSubmit;
-  els.menuDownloadButton.disabled = !canSubmit;
-  if (!canSubmit) {
+  const hasData = appState.results.length > 0;
+  els.menuDownloadButton.disabled = !hasData;
+  if (!hasData) {
     els.menuStatus.textContent = "No data collected yet.";
   } else if (!APPS_SCRIPT_URL) {
     els.menuStatus.textContent = "Apps Script URL is empty. Use CSV download as backup.";
   } else if (appState.lastSubmission?.participantAttemptId) {
     els.menuStatus.textContent = `Latest official save: ${appState.lastSubmission.participantAttemptId}`;
   } else {
-    els.menuStatus.textContent = "Submit once after you finish. The sheet will automatically save this student as studentID_1, studentID_2, ...";
+    els.menuStatus.textContent = "Each finished task is automatically sent to Google Sheets.";
   }
 }
 
@@ -373,12 +371,14 @@ function finalizeTaskRun() {
   });
 
   showTaskSummary(task, { accuracy, meanRt, mainTrialCount: mainRows.length });
+  syncResults();
 }
 
 function showTaskSummary(task, metrics) {
   hideAllPanels();
   els.summaryPanel.classList.remove("hidden");
   els.summaryTitle.textContent = `${task.title} complete`;
+  els.nextTaskButton.textContent = task.id === "stroop" ? "Visual Search 하기" : "Stroop 하기";
   els.summaryCards.innerHTML = `
     <article class="summary-card">
       <h3>Accuracy</h3>
@@ -394,16 +394,12 @@ function showTaskSummary(task, metrics) {
     </article>
   `;
 
-  if (!APPS_SCRIPT_URL) {
-    els.submissionStatus.textContent = "Apps Script URL is empty. You can still download CSV and continue.";
-  } else if (appState.lastSubmission?.participantAttemptId) {
-    els.submissionStatus.textContent = `Last official save: ${appState.lastSubmission.participantAttemptId}. You can continue and resubmit later.`;
-  } else {
-    els.submissionStatus.textContent = "When you submit, the sheet will automatically assign this student ID as _1, _2, _3 in time order.";
-  }
+  els.submissionStatus.textContent = APPS_SCRIPT_URL
+    ? "자동 제출 중입니다..."
+    : "Apps Script URL is empty. You can still download CSV.";
 }
 
-async function submitResults() {
+async function syncResults() {
   if (!appState.results.length) {
     setStatusText("No data to submit yet.");
     return;
@@ -413,7 +409,6 @@ async function submitResults() {
     return;
   }
 
-  toggleSubmitButtons(true);
   setStatusText("Submitting to Google Sheets...");
 
   try {
@@ -442,8 +437,6 @@ async function submitResults() {
     renderMenu();
   } catch (error) {
     setStatusText(`Submission failed: ${error.message}. Use CSV as backup.`);
-  } finally {
-    toggleSubmitButtons(false);
   }
 }
 
@@ -493,6 +486,21 @@ function resetApp() {
   els.setupForm.reset();
   hideAllPanels();
   els.setupPanel.classList.remove("hidden");
+}
+
+function retryCurrentTask() {
+  if (appState.currentTaskKey) {
+    showInstructions(appState.currentTaskKey);
+  }
+}
+
+function goToOtherTask() {
+  if (!appState.currentTaskKey) {
+    showMenu();
+    return;
+  }
+  const otherTaskKey = appState.currentTaskKey === "stroop" ? "visualSearch" : "stroop";
+  showInstructions(otherTaskKey);
 }
 
 function buildStroopTrials(count) {
@@ -561,11 +569,6 @@ function buildVisualSearchTrials(count) {
 function sanitizeParticipantId(value) {
   const normalized = value.replace(/\s+/g, "").replace(/[^a-zA-Z0-9_-]/g, "");
   return normalized || "student";
-}
-
-function toggleSubmitButtons(disabled) {
-  els.submitButton.disabled = disabled;
-  els.menuSubmitButton.disabled = disabled;
 }
 
 function setButtonsDisabled(disabled) {
