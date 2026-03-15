@@ -7,6 +7,13 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
+    <div id="sync-overlay" class="sync-overlay hidden" aria-live="polite">
+      <div class="sync-card">
+        <div class="sync-spinner"></div>
+        <h2>저장 중입니다</h2>
+        <p id="sync-overlay-text">결과를 Google Sheets에 전송하고 있습니다. 잠시만 기다려주세요.</p>
+      </div>
+    </div>
     <main class="app-shell">
       <section class="panel hero" id="setup-panel">
         <p class="eyebrow">Cognitive Science Class</p>
@@ -54,7 +61,6 @@
           실행할 수 있습니다.
         </p>
         <div id="task-menu" class="task-menu"></div>
-        <div id="overall-stats" class="summary-cards"></div>
         <div class="submission-actions">
           <button id="menu-reset-button" class="ghost-button">참여자 다시 설정</button>
         </div>

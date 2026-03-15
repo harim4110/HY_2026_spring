@@ -74,6 +74,7 @@ const appState = {
   activeRun: null,
   lastSubmission: null,
   lastSyncError: null,
+  isSyncing: false,
 };
 
 const els = {
@@ -85,7 +86,6 @@ const els = {
   menuPanel: document.querySelector("#menu-panel"),
   welcomeTitle: document.querySelector("#welcome-title"),
   taskMenu: document.querySelector("#task-menu"),
-  overallStats: document.querySelector("#overall-stats"),
   menuStatus: document.querySelector("#menu-status"),
   menuResetButton: document.querySelector("#menu-reset-button"),
   instructionPanel: document.querySelector("#instruction-panel"),
@@ -112,6 +112,8 @@ const els = {
   retryTaskButton: document.querySelector("#retry-task-button"),
   backToMenuButton: document.querySelector("#back-to-menu-button"),
   submissionStatus: document.querySelector("#submission-status"),
+  syncOverlay: document.querySelector("#sync-overlay"),
+  syncOverlayText: document.querySelector("#sync-overlay-text"),
 };
 
 els.setupForm.addEventListener("submit", handleSetupSubmit);
@@ -135,6 +137,7 @@ function handleSetupSubmit(event) {
   appState.activeRun = null;
   appState.lastSubmission = null;
   appState.lastSyncError = null;
+  appState.isSyncing = false;
   renderMenu();
   showMenu();
 }
@@ -153,8 +156,8 @@ function renderMenu() {
       <h3>${task.title}</h3>
       <p>${task.description}</p>
       <p class="meta">Estimated time: ${task.estimatedMinutes}</p>
-      <p class="meta">Runs completed on this device: ${previousRuns.length}</p>
-      <p class="meta">${latestRun ? `Latest run: ${latestRun.accuracy}% accuracy, ${latestRun.meanRt} ms` : "No completed run yet."}</p>
+      <p class="meta">${latestRun ? `Accuracy: ${latestRun.accuracy}%` : "Accuracy: -"}</p>
+      <p class="meta">${latestRun ? `Mean RT: ${latestRun.meanRt} ms` : "Mean RT: -"}</p>
       <button class="primary-button" data-task-key="${taskKey}">Start ${task.title}</button>
     `;
     card.querySelector("button").addEventListener("click", () => showInstructions(taskKey));
@@ -165,25 +168,6 @@ function renderMenu() {
 }
 
 function updateOverallStats() {
-  const mainRows = appState.results.filter((row) => row.phase === "main");
-  const accuracy = mainRows.length ? Math.round((mainRows.filter((row) => row.correct).length / mainRows.length) * 100) : 0;
-  const meanRt = mainRows.length ? Math.round(mainRows.reduce((sum, row) => sum + row.reactionTimeMs, 0) / mainRows.length) : 0;
-
-  els.overallStats.innerHTML = `
-    <article class="summary-card">
-      <h3>Total stored trials</h3>
-      <p><strong>${appState.results.length}</strong></p>
-    </article>
-    <article class="summary-card">
-      <h3>Main-block accuracy</h3>
-      <p><strong>${mainRows.length ? `${accuracy}%` : "-"}</strong></p>
-    </article>
-    <article class="summary-card">
-      <h3>Main-block mean RT</h3>
-      <p><strong>${mainRows.length ? `${meanRt} ms` : "-"}</strong></p>
-    </article>
-  `;
-
   const hasData = appState.results.length > 0;
   if (!hasData) {
     els.menuStatus.textContent = "No data collected yet.";
@@ -411,6 +395,7 @@ function showTaskSummary(task, metrics) {
   if (DEBUG_MODE) {
     els.submissionStatus.textContent += " Debug mode is on.";
   }
+  setSummaryActionsDisabled(appState.isSyncing);
 }
 
 async function syncResults() {
@@ -423,6 +408,9 @@ async function syncResults() {
     return;
   }
 
+  appState.isSyncing = true;
+  setSummaryActionsDisabled(true);
+  setSyncOverlay(true, "결과를 Google Sheets에 저장하고 있습니다. 잠시만 기다려주세요.");
   appState.lastSyncError = null;
   setStatusText("Submitting to Google Sheets...");
 
@@ -453,6 +441,10 @@ async function syncResults() {
   } catch (error) {
     appState.lastSyncError = error.message;
     setStatusText(`Submission failed: ${error.message}.`);
+  } finally {
+    appState.isSyncing = false;
+    setSummaryActionsDisabled(false);
+    setSyncOverlay(false);
   }
 }
 
@@ -474,12 +466,18 @@ function resetApp() {
 }
 
 function retryCurrentTask() {
+  if (appState.isSyncing) {
+    return;
+  }
   if (appState.currentTaskKey) {
     showInstructions(appState.currentTaskKey);
   }
 }
 
 function goToOtherTask() {
+  if (appState.isSyncing) {
+    return;
+  }
   if (!appState.currentTaskKey) {
     showMenu();
     return;
@@ -589,6 +587,19 @@ function setButtonsDisabled(disabled) {
   els.responseButtons.querySelectorAll("button").forEach((button) => {
     button.disabled = disabled;
   });
+}
+
+function setSummaryActionsDisabled(disabled) {
+  els.nextTaskButton.disabled = disabled;
+  els.retryTaskButton.disabled = disabled;
+  els.backToMenuButton.disabled = disabled;
+}
+
+function setSyncOverlay(visible, message = "") {
+  els.syncOverlay.classList.toggle("hidden", !visible);
+  if (message) {
+    els.syncOverlayText.textContent = message;
+  }
 }
 
 function setStatusText(text) {
