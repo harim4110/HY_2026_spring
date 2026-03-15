@@ -12,8 +12,8 @@
         <p class="eyebrow">Cognitive Science Class</p>
         <h1>Stroop + Visual Search</h1>
         <p class="intro">
-          학생이 모바일 또는 노트북으로 접속해 두 과제를 수행하고, 결과를 Google Sheets로 제출하거나
-          CSV로 내려받을 수 있는 수업용 웹앱입니다.
+          학생이 모바일 또는 노트북으로 접속해 두 과제를 수행하고, 결과가 자동으로 Google Sheets에 저장되는
+          수업용 웹앱입니다.
         </p>
 
         <form id="setup-form" class="setup-form">
@@ -57,9 +57,6 @@
         <div id="task-menu" class="task-menu"></div>
         <div id="overall-stats" class="summary-cards"></div>
         <div class="submission-actions">
-          <button id="menu-submit-button" class="primary-button" disabled>Google Sheets로 제출</button>
-          <button id="menu-download-button" class="secondary-button" disabled>CSV 다운로드</button>
-          <a class="ghost-button link-button" href="./results.html">결과 대시보드</a>
           <button id="menu-reset-button" class="ghost-button">참여자 다시 설정</button>
         </div>
         <p id="menu-status" class="submission-status"></p>
@@ -103,11 +100,9 @@
         <h2 id="summary-title">실험이 끝났습니다</h2>
         <div id="summary-cards" class="summary-cards"></div>
         <div class="submission-actions">
-          <button id="submit-button" class="primary-button">Google Sheets로 제출</button>
-          <button id="download-button" class="secondary-button">CSV 다운로드</button>
-          <a class="ghost-button link-button" href="./results.html">결과 대시보드</a>
+          <button id="next-task-button" class="primary-button">다음 과제 하기</button>
+          <button id="retry-task-button" class="ghost-button">다시하기</button>
           <button id="back-to-menu-button" class="ghost-button">메뉴로 돌아가기</button>
-          <button id="restart-button" class="ghost-button">처음으로</button>
         </div>
         <p id="submission-status" class="submission-status"></p>
       </section>

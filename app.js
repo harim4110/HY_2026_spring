@@ -77,7 +77,6 @@ const els = {
   taskMenu: document.querySelector("#task-menu"),
   overallStats: document.querySelector("#overall-stats"),
   menuStatus: document.querySelector("#menu-status"),
-  menuDownloadButton: document.querySelector("#menu-download-button"),
   menuResetButton: document.querySelector("#menu-reset-button"),
   instructionPanel: document.querySelector("#instruction-panel"),
   taskTag: document.querySelector("#task-tag"),
@@ -101,7 +100,6 @@ const els = {
   summaryCards: document.querySelector("#summary-cards"),
   nextTaskButton: document.querySelector("#next-task-button"),
   retryTaskButton: document.querySelector("#retry-task-button"),
-  downloadButton: document.querySelector("#download-button"),
   backToMenuButton: document.querySelector("#back-to-menu-button"),
   submissionStatus: document.querySelector("#submission-status"),
 };
@@ -110,9 +108,7 @@ els.setupForm.addEventListener("submit", handleSetupSubmit);
 els.startTaskButton.addEventListener("click", startCurrentTask);
 els.nextTaskButton.addEventListener("click", goToOtherTask);
 els.retryTaskButton.addEventListener("click", retryCurrentTask);
-els.downloadButton.addEventListener("click", downloadCsv);
 els.backToMenuButton.addEventListener("click", showMenu);
-els.menuDownloadButton.addEventListener("click", downloadCsv);
 els.menuResetButton.addEventListener("click", resetApp);
 
 function handleSetupSubmit(event) {
@@ -178,11 +174,10 @@ function updateOverallStats() {
   `;
 
   const hasData = appState.results.length > 0;
-  els.menuDownloadButton.disabled = !hasData;
   if (!hasData) {
     els.menuStatus.textContent = "No data collected yet.";
   } else if (!APPS_SCRIPT_URL) {
-    els.menuStatus.textContent = "Apps Script URL is empty. Use CSV download as backup.";
+    els.menuStatus.textContent = "Apps Script URL is empty.";
   } else if (appState.lastSubmission?.participantAttemptId) {
     els.menuStatus.textContent = `Latest official save: ${appState.lastSubmission.participantAttemptId}`;
   } else {
@@ -396,7 +391,7 @@ function showTaskSummary(task, metrics) {
 
   els.submissionStatus.textContent = APPS_SCRIPT_URL
     ? "자동 제출 중입니다..."
-    : "Apps Script URL is empty. You can still download CSV.";
+    : "Apps Script URL is empty.";
 }
 
 async function syncResults() {
@@ -434,41 +429,9 @@ async function syncResults() {
         ? `Submission complete. Official ID: ${data.participantAttemptId}`
         : `Submission complete. Inserted ${data.insertedRows ?? 0} new rows.`
     );
-    renderMenu();
   } catch (error) {
-    setStatusText(`Submission failed: ${error.message}. Use CSV as backup.`);
+    setStatusText(`Submission failed: ${error.message}.`);
   }
-}
-
-function downloadCsv() {
-  if (!appState.results.length) {
-    setStatusText("No data to download yet.");
-    return;
-  }
-
-  const rows = appState.results;
-  const headers = Array.from(
-    rows.reduce((set, row) => {
-      Object.keys(row).forEach((key) => set.add(key));
-      return set;
-    }, new Set())
-  );
-
-  const csv = [
-    headers.join(","),
-    ...rows.map((row) => headers.map((header) => csvEscape(row[header] ?? "")).join(",")),
-  ].join("\n");
-
-  const blob = new Blob([`\ufeff${csv}`], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `${appState.participant.baseParticipantId || "participant"}-behavioral-data.csv`;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
-  setStatusText("CSV downloaded.");
 }
 
 function resetApp() {
@@ -601,9 +564,4 @@ function shuffle(items) {
     [copy[i], copy[j]] = [copy[j], copy[i]];
   }
   return copy;
-}
-
-function csvEscape(value) {
-  const text = String(value);
-  return /[",\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 }
