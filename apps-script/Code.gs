@@ -100,6 +100,7 @@ function doGet(e) {
       ok: true,
       generatedAt: new Date().toISOString(),
       winners: {},
+      leaderboards: {},
       conditionMeans: {},
     });
   }
@@ -113,6 +114,7 @@ function doGet(e) {
     ok: true,
     generatedAt: new Date().toISOString(),
     winners: buildWinners(summaries),
+    leaderboards: buildLeaderboards(summaries),
     conditionMeans: buildConditionMeans(rows),
   });
 }
@@ -214,37 +216,58 @@ function buildWinners(summaries) {
 }
 
 function buildConditionMeans(rows) {
-  var buckets = {};
+  var participantBuckets = {};
   rows.forEach(function(row) {
     var taskId = row.taskId || "unknown";
     var condition = row.condition || "unknown";
-    var key = taskId + "::" + condition;
-    if (!buckets[key]) {
-      buckets[key] = {
+    var participantAttemptId = row.participantAttemptId || "unknown";
+    var key = [taskId, condition, participantAttemptId].join("::");
+    if (!participantBuckets[key]) {
+      participantBuckets[key] = {
         taskId: taskId,
         condition: condition,
+        participantAttemptId: participantAttemptId,
         reactionTimes: [],
         correctCount: 0,
         totalCount: 0,
       };
     }
 
-    buckets[key].reactionTimes.push(Number(row.reactionTimeMs) || 0);
-    buckets[key].correctCount += row.correct === true || row.correct === "TRUE" || row.correct === "true" ? 1 : 0;
-    buckets[key].totalCount += 1;
+    participantBuckets[key].reactionTimes.push(Number(row.reactionTimeMs) || 0);
+    participantBuckets[key].correctCount += row.correct === true || row.correct === "TRUE" || row.correct === "true" ? 1 : 0;
+    participantBuckets[key].totalCount += 1;
+  });
+
+  var conditionBuckets = {};
+  Object.keys(participantBuckets).forEach(function(key) {
+    var bucket = participantBuckets[key];
+    var conditionKey = bucket.taskId + "::" + bucket.condition;
+    if (!conditionBuckets[conditionKey]) {
+      conditionBuckets[conditionKey] = {
+        taskId: bucket.taskId,
+        condition: bucket.condition,
+        meanRts: [],
+        accuracies: [],
+        sampleSize: 0,
+      };
+    }
+
+    conditionBuckets[conditionKey].meanRts.push(average(bucket.reactionTimes));
+    conditionBuckets[conditionKey].accuracies.push(bucket.totalCount ? (bucket.correctCount / bucket.totalCount) * 100 : 0);
+    conditionBuckets[conditionKey].sampleSize += 1;
   });
 
   var result = {};
-  Object.keys(buckets).forEach(function(key) {
-    var bucket = buckets[key];
+  Object.keys(conditionBuckets).forEach(function(key) {
+    var bucket = conditionBuckets[key];
     if (!result[bucket.taskId]) {
       result[bucket.taskId] = [];
     }
     result[bucket.taskId].push({
       condition: bucket.condition,
-      meanRt: round(average(bucket.reactionTimes)),
-      accuracy: round(bucket.totalCount ? (bucket.correctCount / bucket.totalCount) * 100 : 0),
-      trialCount: bucket.totalCount,
+      meanRt: round(average(bucket.meanRts)),
+      accuracy: round(average(bucket.accuracies)),
+      sampleSize: bucket.sampleSize,
     });
   });
 
@@ -255,6 +278,17 @@ function buildConditionMeans(rows) {
   });
 
   return result;
+}
+
+function buildLeaderboards(summaries) {
+  var leaderboards = {};
+  ["stroop", "visual-search"].forEach(function(taskId) {
+    leaderboards[taskId] = summaries
+      .filter(function(item) { return item.taskId === taskId; })
+      .sort(compareRuns)
+      .slice(0, 10);
+  });
+  return leaderboards;
 }
 
 function compareRuns(a, b) {
