@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Brain State ROI Viewer Admin</title>
+    <link rel="stylesheet" href="./brain-viewer.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js"
+        }
+      }
+    </script>
+  </head>
+  <body data-viewer-mode="admin">
+    <main class="brain-app">
+      <section class="viewer-stage" aria-label="3D brain ROI activation viewer">
+        <canvas id="brain-canvas"></canvas>
+        <div class="topbar">
+          <a class="icon-link" href="./brain-viewer.html" aria-label="학생 화면으로" title="학생 화면으로">
+            <span aria-hidden="true">←</span>
+          </a>
+          <div>
+            <p class="eyebrow">Instructor Admin</p>
+            <h1>Brain State Answer Key</h1>
+          </div>
+          <button id="reset-camera" class="icon-button" type="button" aria-label="카메라 초기화" title="카메라 초기화">
+            <span aria-hidden="true">↻</span>
+          </button>
+        </div>
+        <div id="tooltip" class="roi-tooltip hidden"></div>
+      </section>
+
+      <aside class="control-panel" aria-label="Brain viewer admin controls">
+        <nav class="page-tabs" aria-label="Brain viewer pages">
+          <a href="./brain-study.html">공부하기</a>
+          <a href="./brain-viewer.html">퀴즈 풀기</a>
+          <a class="active" href="./brain-viewer-admin.html">Admin</a>
+        </nav>
+
+        <div class="state-block">
+          <p class="eyebrow">Current Case</p>
+          <h2 id="state-title"></h2>
+          <p id="state-summary" class="state-summary"></p>
+        </div>
+
+        <div class="segmented-control" id="state-buttons" aria-label="상태 선택"></div>
+
+        <div class="slider-grid">
+          <label>
+            뇌 투명도
+            <input id="brain-opacity" type="range" min="0.28" max="0.95" value="0.78" step="0.02" />
+          </label>
+          <label>
+            Activation 강도
+            <input id="activation-scale" type="range" min="0.55" max="1.8" value="1" step="0.05" />
+          </label>
+        </div>
+
+        <div class="toggle-row">
+          <label><input id="show-labels" type="checkbox" checked /> ROI 이름</label>
+        </div>
+
+        <section class="roi-list-section">
+          <div class="section-head">
+            <h3>Mapped ROIs</h3>
+            <span id="active-count"></span>
+          </div>
+          <div id="roi-list" class="roi-list"></div>
+        </section>
+
+        <section class="quiz-section">
+          <div class="section-head">
+            <h3>Instructor Key</h3>
+            <button id="reveal-answer" class="ghost-button" type="button">정답 보기</button>
+          </div>
+          <p id="class-prompt"></p>
+          <p id="answer-text" class="answer-text hidden"></p>
+        </section>
+      </aside>
+    </main>
+
+    <script type="module" src="./brain-viewer.js"></script>
+  </body>
+</html>
